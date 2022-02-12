@@ -1,7 +1,6 @@
 #![no_std]
 
 extern crate alloc;
-
 elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
 
@@ -14,16 +13,19 @@ const ON_SALE_SUPPLY: u64 = 40; // 2700;
 const PRE_SALE_QTY: u64 = 10; // 200
 const ONE_EGLD: u64 = 1_000_000_000_000_000_000;
 const IMAGE_EXT: &str = ".png";
-const IPFS_SCHEME: &str = "ipfs://";
+const IPFS_SCHEME: &str = "https://ipfs.io/ipfs/";
 const METADATA_KEY_NAME: &str = "metadata:";
 const METADATA_FILE_EXTENSION: &str = ".json";
 const ATTR_SEPARATOR: &str = ";";
 const URI_SLASH: &str = "/";
 const TAGS_KEY_NAME: &str = "tags:";
 
+
+
 // TODO: Pass it as function args (in init ideally)
 const IMAGE_CID: &str = "bafybeidfyg4tkxazcrih3eaocpwn4m67vyhcuocrujwple6yjolxktniqm";
 const JSON_CID: &str = "bafybeiewbfwy2c33zzrn6u57z6ymni4jixdscryj7jovyuiknsklfqb4n4";
+
 
 #[elrond_wasm::contract]
 pub trait NftMinter {
@@ -156,7 +158,8 @@ pub trait NftMinter {
         let is_pre_sales: bool = sold_minted_count < PRE_SALE_QTY as usize;
         let caller = self.blockchain().get_caller();
         let caller_mint_count = self.sold_count_by_address(&caller).get();
-        let max_per_address = if is_pre_sales { 1 } else { 4 };
+        // let max_per_address = if is_pre_sales { 1 } else { 4 };
+        let max_per_address = if is_pre_sales { 5 } else { 10 }; // for test purposes only
 
         require!(
             (sold_minted_count as u64) < ON_SALE_SUPPLY,
@@ -170,7 +173,7 @@ pub trait NftMinter {
             caller_mint_count < max_per_address,
             "max mint per person reached"
         );
-
+  
         // Mint
         let nft_nonce = self.create_nft(self.generate_random_id())?;
 
@@ -411,6 +414,7 @@ pub trait NftMinter {
     fn minted_ids(&self) -> SetMapper<u64>;
 
     // Set map to store sold minted nfts
+    #[view(soldMintedIds)]
     #[storage_mapper("soldMintedIds")]
     fn sold_minted_ids(&self) -> SetMapper<u64>;
 
@@ -419,4 +423,7 @@ pub trait NftMinter {
 
     #[storage_mapper("mintCountByAddress")]
     fn sold_count_by_address(&self, address: &ManagedAddress) -> SingleValueMapper<usize>;
+
+    #[storage_mapper("wlAddresses")]
+    fn white_list(&self) -> SetMapper<ManagedAddress>;
 }
