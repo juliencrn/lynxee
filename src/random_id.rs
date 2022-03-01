@@ -16,7 +16,7 @@ pub trait RandomId {
         for i in start..=supply {
             let vec_len = tokens_vec.len();
             tokens_vec.push(i as u32);
-            if (vec_len > 2) {
+            if vec_len > 2 {
                 let rand_index = rand_source.next_usize_in_range(0, vec_len);
                 tokens_vec.swap(rand_index, 0);
             }

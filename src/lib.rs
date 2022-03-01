@@ -12,7 +12,7 @@
 extern crate alloc;
 elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
-
+use elrond_wasm::elrond_codec::TopEncode;
 mod publicsale;
 mod random_id;
 mod register;
@@ -55,7 +55,7 @@ pub trait NftMinter:
         self._image_cid().set(&str_to_buffer(IMAGE_CID));
         self._public_sale_status().set(false);
         // if upgrade is needed,
-        if (self.count_minted_ids().is_empty()) {
+        if self.count_minted_ids().is_empty() {
             self._fill_remaining_tokens(MAX_SUPPLY)?;
             self.count_minted_ids().set(0);
         }
@@ -71,12 +71,12 @@ pub trait NftMinter:
     fn giveaway(
         &self,
         receiver: &ManagedAddress,
-        #[var_args] id: OptionalArg<u32>,
+        #[var_args] id: OptionalValue<u32>,
     ) -> SCResult<()> {
         let sold_minted_count = self.count_minted_ids().get();
         let next_id: u32 = match id {
-            OptionalArg::Some(index) => index,
-            OptionalArg::None => self._generate_random_id(sold_minted_count)?,
+            OptionalValue::Some(index) => index,
+            OptionalValue::None => self._generate_random_id(sold_minted_count)?,
         };
 
         // Mint
@@ -98,7 +98,7 @@ pub trait NftMinter:
     #[endpoint(giveawayMany)]
     fn giveaway_many(&self, receiver: &ManagedAddress, count: u32) -> SCResult<()> {
         for _ in 0..count {
-            self.giveaway(receiver, OptionalArg::None)?;
+            self.giveaway(receiver, OptionalValue::None)?;
         }
         Ok(())
     }
@@ -122,7 +122,7 @@ pub trait NftMinter:
         let caller_mint_count = self._sold_count_by_address(&caller).get();
         let is_whitelisted = self._is_whitelisted(&caller);
 
-        if (!is_public_sale) {
+        if !is_public_sale {
             require!(is_whitelisted, "Caller is not whitelisted");
         }
         require!(
@@ -200,7 +200,7 @@ pub trait NftMinter:
 
     /// Wrap the NFT creation with logic and checking
     fn _mint(&self, id: u32) -> SCResult<u32> {
-        self._require_token_issued()?;
+        self._require_token_issued();
         self._require_local_roles_set()?;
         self._require_royalties_set()?;
         require!(
@@ -234,10 +234,15 @@ pub trait NftMinter:
         let name = build_name(&token_name, &id);
         let uris = build_uris(&image_cid, &id);
         let attributes = build_attributes(&json_cid, &tags, &id);
+        let mut serialized_attributes = ManagedBuffer::new();
+        if let core::result::Result::Err(err) = attributes.top_encode(&mut serialized_attributes) {
+            sc_panic!("Attributes encode error: {}", err.message_bytes());
+        }
         let attributes_hash = self
             .crypto()
-            .sha256_legacy(&attributes.to_boxed_bytes().as_slice());
-        let hash_buffer = ManagedBuffer::from(attributes_hash.as_bytes());
+            .sha256_legacy_managed::<1000>(&serialized_attributes);
+            
+        let hash_buffer = attributes_hash.as_managed_buffer();
         let ntf_amount = BigUint::from(1 as u32);
 
         // send tx

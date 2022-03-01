@@ -13,13 +13,12 @@ pub trait Register {
         #[payment] issue_cost: BigUint,
         token_name: ManagedBuffer,
         token_ticker: ManagedBuffer,
-    ) -> SCResult<AsyncCall> {
+    ) {
         require!(self.token_id().is_empty(), "Token already issued");
 
         self.token_name().set(&token_name);
 
-        Ok(self
-            .send()
+        self.send()
             .esdt_system_sc_proxy()
             .issue_non_fungible(
                 issue_cost,
@@ -29,29 +28,29 @@ pub trait Register {
                     can_freeze: true,
                     can_wipe: true,
                     can_pause: true,
-                    can_change_owner: true,
+                    can_change_owner: false,
                     can_upgrade: false,
                     can_add_special_roles: true,
                 },
             )
             .async_call()
-            .with_callback(self.callbacks().issue_callback()))
+            .with_callback(self.callbacks().issue_callback())
+            .call_and_exit()
     }
 
     #[only_owner]
     #[endpoint(setLocalRoles)]
-    fn set_local_roles(&self) -> SCResult<AsyncCall> {
-        self._require_token_issued()?;
-
-        Ok(self
-            .send()
+    fn set_local_roles(&self) {
+        self._require_token_issued();
+        self.send()
             .esdt_system_sc_proxy()
             .set_special_roles(
                 &self.blockchain().get_sc_address(),
                 &self.token_id().get(),
-                (&[EsdtLocalRole::NftCreate][..]).into_iter().cloned(),
+                [EsdtLocalRole::NftCreate][..].iter().cloned(),
             )
-            .async_call())
+            .async_call()
+            .call_and_exit()
     }
 
     // callbacks
@@ -75,9 +74,8 @@ pub trait Register {
 
     // Require
 
-    fn _require_token_issued(&self) -> SCResult<()> {
+    fn _require_token_issued(&self) {
         require!(!self.token_id().is_empty(), "Token not issued");
-        Ok(())
     }
 
     fn _require_local_roles_set(&self) -> SCResult<()> {

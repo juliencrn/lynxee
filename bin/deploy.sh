@@ -5,23 +5,25 @@
 
 TAGS="0x4c796e7865652c4e656f6469756d2c4e61747572652c4c796e782c416e696d616c73"                                                                                                          # tag1,tag2
 
+# MAINNET CONFIG
+# PROXY="https://gateway.elrond.com"
+# CHAIN="1"
+
 # DEVNET CONFIG
-# PROXY="https://devnet-gateway.elrond.com"
-# CHAIN="D"
+PROXY="https://devnet-gateway.elrond.com"
+CHAIN="D"
 
 # TESTNET CONFIG
 # PROXY="https://testnet-gateway.elrond.com"
 # CHAIN="T"
 
-# MAINNET CONFIG
-PROXY="https://gateway.elrond.com"
-CHAIN="1"
+
 
 erdpy --verbose \
     contract deploy \
     --recall-nonce \
     --project="." \
-    --pem="wallets/owner/neodium.pem" \
+    --pem="wallets/owner/owner.pem" \
     --gas-limit=600000000 \
     --arguments 1000 ${TAGS} \
     --send \
